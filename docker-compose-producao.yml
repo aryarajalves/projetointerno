@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Serviço do Backend (API RESTful FastAPI)
+  backend:
+    image: aryalvesfernandes/projetointerno:backend-1.0.0
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+    networks:
+      - network_swarm_public
+    environment:
+      # Conexão com o banco de dados PostgreSQL do Swarm
+      - DATABASE_URL=postgresql://postgres:SUA_SENHA_POSTGRES@postgres:5432/gerenciador_clientes
+      - SECRET_KEY=10761d391c9242358392d5ccaa9de45f
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.projetointerno_backend.rule=Host(`api.seu-dominio.com`)
+        - traefik.http.routers.projetointerno_backend.entrypoints=websecure
+        - traefik.http.routers.projetointerno_backend.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.projetointerno_backend.service=projetointerno_backend
+        - traefik.http.services.projetointerno_backend.loadbalancer.server.port=8000
+        - traefik.http.services.projetointerno_backend.loadbalancer.passhostheader=true
+
+  # Serviço do Frontend (Interface Web React + Vite)
+  frontend:
+    image: aryalvesfernandes/projetointerno:frontend-1.0.0
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+    networks:
+      - network_swarm_public
+    environment:
+      - VITE_API_URL=https://api.seu-dominio.com
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.projetointerno_frontend.rule=Host(`seu-dominio.com`)
+        - traefik.http.routers.projetointerno_frontend.entrypoints=websecure
+        - traefik.http.routers.projetointerno_frontend.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.projetointerno_frontend.service=projetointerno_frontend
+        - traefik.http.services.projetointerno_frontend.loadbalancer.server.port=5173
+        - traefik.http.services.projetointerno_frontend.loadbalancer.passhostheader=true
+
+networks:
+  network_swarm_public:
+    external: true
+    name: network_swarm_public
