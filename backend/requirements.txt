@@ -1,0 +1,30 @@
+# Framework web assíncrono para construção da API REST
+fastapi==0.111.0
+
+# Servidor ASGI de alta performance para rodar a aplicação FastAPI
+uvicorn==0.30.1
+
+# ORM para mapeamento e manipulação de banco de dados relacional
+sqlalchemy==2.0.31
+
+# Driver de conexão com o banco de dados PostgreSQL
+psycopg2-binary==2.9.9
+
+# Validação de dados e criação de schemas de entrada/saída
+pydantic==2.8.2
+
+# Framework de testes unitários para o backend em Python
+pytest==8.2.2
+
+# Cliente HTTP assíncrono utilizado pelos testes para fazer requisições à API
+httpx==0.27.0
+
+# Geração e validação de tokens JWT para autenticação de usuários
+pyjwt==2.8.0
+
+# Utilitário para hashing e verificação segura de senhas
+passlib[bcrypt]==1.7.4
+
+# Cliente HTTP para integração com API do Portainer
+requests==2.32.3
+
