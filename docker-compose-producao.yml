@@ -15,7 +15,6 @@ services:
       - SUPER_ADMIN_PASSWORD=123456
       # Chave Secreta JWT de Autenticação
       - JWT_SECRET=10761d391c9242358392d5ccaa9de45f
-      - SECRET_KEY=10761d391c9242358392d5ccaa9de45f
     deploy:
       mode: replicated
       replicas: 1
