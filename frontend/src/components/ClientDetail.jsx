@@ -3,8 +3,10 @@ import { CredentialsManager } from './CredentialsManager';
 import { PurchasedAppsManager } from './PurchasedAppsManager';
 import { ClientTrelloManager } from './ClientTrelloManager';
 import { SupportTicketsDashboard } from './SupportTicketsDashboard';
+import { useToast } from './Toast';
 
 export function ClientDetail({ client, onBack, onEdit, onDelete, onUpdateType, currentUser }) {
+  const { showToast } = useToast();
   const isLead = client?.type === 'Lead';
   const [activeTab, setActiveTab] = useState('trello');
   const [pendingTypeChange, setPendingTypeChange] = useState(null); // { newType, label, description, color, icon }
@@ -49,6 +51,9 @@ export function ClientDetail({ client, onBack, onEdit, onDelete, onUpdateType, c
   const handleConfirmTypeChange = () => {
     if (pendingTypeChange && onUpdateType) {
       onUpdateType(client.id, pendingTypeChange.newType);
+      if (showToast) {
+        showToast(`Tipo de contato alterado para ${pendingTypeChange.newType}!`, 'success');
+      }
     }
     setPendingTypeChange(null);
   };

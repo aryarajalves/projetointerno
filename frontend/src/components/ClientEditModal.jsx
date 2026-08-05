@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useToast } from './Toast';
 
 export function ClientEditModal({ isOpen, client, onClose, onSave, currentUser }) {
   if (!isOpen || !client) return null;
 
+  const { showToast } = useToast();
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
 
   const [activeTab, setActiveTab] = useState('basic');
@@ -211,6 +213,9 @@ export function ClientEditModal({ isOpen, client, onClose, onSave, currentUser }
       payload.zapgroup_service_name = zapgroupServiceName;
     }
     onSave(client.id, payload);
+    if (showToast) {
+      showToast('Contato atualizado com sucesso!', 'success');
+    }
     onClose();
   };
 

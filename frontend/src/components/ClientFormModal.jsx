@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useToast } from './Toast';
 
 export function ClientFormModal({ isOpen, onClose, onSave }) {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('principal');
 
   const [name, setName] = useState('');
@@ -30,6 +32,9 @@ export function ClientFormModal({ isOpen, onClose, onSave }) {
       city: city || null,
       state: state || null
     });
+    if (showToast) {
+      showToast('Novo contato criado com sucesso!', 'success');
+    }
     setName('');
     setType('Lead');
     setNotes('');

@@ -133,4 +133,25 @@ describe('Frontend Component Tests', () => {
     expect(screen.queryByTestId('edit-server-ip-input')).not.toBeInTheDocument();
     expect(screen.queryByTestId('edit-server-password-input')).not.toBeInTheDocument();
   });
+
+  it('shows toast notification at top-right when editing contact inside ToastProvider', () => {
+    const handleClose = vi.fn();
+    const handleSave = vi.fn();
+
+    render(
+      <ToastProvider>
+        <ClientEditModal 
+          isOpen={true} 
+          client={mockClient} 
+          onClose={handleClose} 
+          onSave={handleSave} 
+        />
+      </ToastProvider>
+    );
+
+    fireEvent.change(screen.getByLabelText(/NOME DO CONTATO/i), { target: { value: 'Cliente Com Toast' } });
+    fireEvent.submit(screen.getByTestId('edit-client-form'));
+
+    expect(screen.getByText('Contato atualizado com sucesso!')).toBeInTheDocument();
+  });
 });
