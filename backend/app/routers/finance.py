@@ -8,7 +8,16 @@ from app import models
 
 router = APIRouter(prefix="/api/finance", tags=["Finance"])
 
-@router.get("/summary")
+@router.get(
+    "/summary",
+    summary="Resumo Financeiro do Sistema",
+    description="""
+    Retorna os métricas consolidadas de faturamento (hoje, mês atual, ano atual, total acumulado) e detalhamento de vendas por aplicação (AgentFlow, ZapJords, Oraculo, ZapGroup).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def get_financial_summary(db: Session = Depends(get_db)):
     today = date.today()
     current_year = today.year

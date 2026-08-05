@@ -194,7 +194,17 @@ def update_single_client_portainer(client: models.Client, new_image: str, target
             message=f"Erro de conexão com Portainer ({str(e)})."
         )
 
-@router.post("/execute", response_model=List[ClientUpdateResult])
+@router.post(
+    "/execute", 
+    response_model=List[ClientUpdateResult],
+    summary="Executar Atualização Automática de Stacks nos Servidores",
+    description="""
+    Conecta via API ao Portainer dos clientes selecionados, substitui a imagem Docker nos serviços do compose da aplicação informada (AgentFlow, ZapJords, Oraculo, ZapGroup) e dispara o redeploy automático.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`) e o header `X-User-Role: SUPER_ADMIN`.  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN**.
+    """
+)
 def execute_stack_update(
     req: StackUpdateRequest, 
     x_user_role: Optional[str] = Header(None, alias="X-User-Role"),

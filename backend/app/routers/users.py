@@ -9,7 +9,17 @@ from app import models, schemas
 
 router = APIRouter(prefix="/api/users", tags=["User Management & Invites"])
 
-@router.get("/", response_model=List[schemas.UserResponse])
+@router.get(
+    "/", 
+    response_model=List[schemas.UserResponse],
+    summary="Listar Usuários Ativos",
+    description="""
+    Retorna a lista de usuários ativos cadastrados no sistema, com suporte a filtros por busca de nome/e-mail e papel (role).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def get_users(
     search: Optional[str] = None,
     role: Optional[str] = None,
@@ -29,7 +39,18 @@ def get_users(
 
     return query.order_by(models.User.created_at.asc()).all()
 
-@router.post("/invite", response_model=schemas.InviteResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invite", 
+    response_model=schemas.InviteResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Gerar Novo Convite de Usuário",
+    description="""
+    Cria um link de convite com token temporário e validade em horas, podendo vincular permissões de acesso a clientes específicos.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def create_invite(invite_data: schemas.InviteCreate, db: Session = Depends(get_db)):
     token = str(uuid.uuid4())
     expires_at = datetime.utcnow() + timedelta(hours=invite_data.valid_hours)
@@ -48,11 +69,31 @@ def create_invite(invite_data: schemas.InviteCreate, db: Session = Depends(get_d
     db.refresh(db_invite)
     return db_invite
 
-@router.get("/invites", response_model=List[schemas.InviteResponse])
+@router.get(
+    "/invites", 
+    response_model=List[schemas.InviteResponse],
+    summary="Listar Todos os Convites Gerados",
+    description="""
+    Retorna o histórico de convites gerados para cadastro de novos usuários no sistema.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def get_invites(db: Session = Depends(get_db)):
     return db.query(models.Invite).order_by(models.Invite.created_at.desc()).all()
 
-@router.get("/invites/{token}", response_model=schemas.InviteResponse)
+@router.get(
+    "/invites/{token}", 
+    response_model=schemas.InviteResponse,
+    summary="Consultar Validade de um Convite",
+    description="""
+    Verifica se um token de convite específico é válido, se já foi utilizado ou se está expirado.
+
+    🔓 **Autenticação:** Não necessária (Rota Pública).  
+    👤 **Permissão:** Qualquer convidado em posse do link.
+    """
+)
 def get_invite_by_token(token: str, db: Session = Depends(get_db)):
     db_invite = db.query(models.Invite).filter(models.Invite.token == token).first()
     if not db_invite:
@@ -66,7 +107,18 @@ def get_invite_by_token(token: str, db: Session = Depends(get_db)):
 
     return db_invite
 
-@router.post("/invites/{token}/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invites/{token}/register", 
+    response_model=schemas.UserResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar Usuário via Convite",
+    description="""
+    Conclui o cadastro de um novo usuário utilizando o token recebido pelo convite, definindo nome, e-mail e senha.
+
+    🔓 **Autenticação:** Não necessária (Rota Pública via Token).  
+    👤 **Permissão:** Convidado portador do token válido.
+    """
+)
 def register_via_invite(token: str, req: schemas.InviteRegisterRequest, db: Session = Depends(get_db)):
     db_invite = db.query(models.Invite).filter(models.Invite.token == token).first()
     if not db_invite or db_invite.used or datetime.utcnow() > db_invite.expires_at:
@@ -99,7 +151,17 @@ def register_via_invite(token: str, req: schemas.InviteRegisterRequest, db: Sess
 
     return new_user
 
-@router.put("/{user_id}", response_model=schemas.UserResponse)
+@router.put(
+    "/{user_id}", 
+    response_model=schemas.UserResponse,
+    summary="Atualizar Dados de um Usuário",
+    description="""
+    Atualiza as informações de um usuário (nome, papel, status, clientes permitidos).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
@@ -126,7 +188,17 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
     db.refresh(db_user)
     return db_user
 
-@router.put("/{user_id}/reset-password", status_code=status.HTTP_200_OK)
+@router.put(
+    "/{user_id}/reset-password", 
+    status_code=status.HTTP_200_OK,
+    summary="Redefinir Senha de um Usuário",
+    description="""
+    Redefine a senha de acesso de um usuário do sistema.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def reset_user_password(user_id: int, pwd_req: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
@@ -139,7 +211,17 @@ def reset_user_password(user_id: int, pwd_req: schemas.PasswordResetRequest, db:
     db.commit()
     return {"detail": "Senha redefinida com sucesso!"}
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{user_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Inativar/Excluir Usuário",
+    description="""
+    Inativa um usuário no sistema (altera o status para inactive).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:

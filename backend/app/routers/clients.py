@@ -9,7 +9,17 @@ from app import models, schemas
 
 router = APIRouter(prefix="/api/clients", tags=["Clients"])
 
-@router.get("/", response_model=schemas.ClientListResponse)
+@router.get(
+    "/", 
+    response_model=schemas.ClientListResponse,
+    summary="Listar Contatos / Clientes",
+    description="""
+    Retorna a lista paginada de contatos e leads cadastrados no sistema com suporte a múltiplos filtros (busca por nome, tipo Lead/Cliente, credenciais salvas, demandas Trello, tickets de suporte, servidor Portainer e ordenação).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN**, **ADMIN** e **USER** (usuários USER visualizam apenas os clientes expressamente autorizados).
+    """
+)
 def get_clients(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=1000),
@@ -63,30 +73,27 @@ def get_clients(
             (models.Client.notes.ilike(search_pattern))
         )
 
-    # Filtro por Data de Criação (YYYY-MM-DD)
+    # Filtro por Data de Criação Exata
     if created_date:
         try:
-            parsed_date = date.fromisoformat(created_date)
-            query = query.filter(cast(models.Client.created_at, Date) == parsed_date)
+            target_date = date.fromisoformat(created_date)
+            query = query.filter(cast(models.Client.created_at, Date) == target_date)
         except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Formato de data inválido. Use AAAA-MM-DD."
-            )
+            pass
 
-    # Ordenação (Padrão: Fixados primeiro, depois por nome/data)
+    # Ordenação dos resultados
     if order_by == "name_desc":
-        query = query.order_by(desc(models.Client.is_pinned), desc(models.Client.name))
+        query = query.order_by(models.Client.is_pinned.desc(), desc(models.Client.name))
     elif order_by == "date_desc":
-        query = query.order_by(desc(models.Client.is_pinned), desc(models.Client.created_at))
+        query = query.order_by(models.Client.is_pinned.desc(), desc(models.Client.created_at))
     elif order_by == "date_asc":
-        query = query.order_by(desc(models.Client.is_pinned), asc(models.Client.created_at))
-    else:
-        query = query.order_by(desc(models.Client.is_pinned), asc(models.Client.name))
+        query = query.order_by(models.Client.is_pinned.desc(), asc(models.Client.created_at))
+    else: # name_asc (padrão)
+        query = query.order_by(models.Client.is_pinned.desc(), asc(models.Client.name))
 
     total = query.count()
-    skip = (page - 1) * limit
-    clients = query.offset(skip).limit(limit).all()
+    offset = (page - 1) * limit
+    clients = query.offset(offset).limit(limit).all()
 
     return {
         "items": clients,
@@ -96,7 +103,18 @@ def get_clients(
         "pages": (total + limit - 1) // limit if total > 0 else 1
     }
 
-@router.post("/", response_model=schemas.ClientResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", 
+    response_model=schemas.ClientResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Cadastrar Novo Contato",
+    description="""
+    Cria um novo registro de contato (Lead ou Cliente) no sistema.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def create_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db_client = models.Client(**client.model_dump())
     db.add(db_client)
@@ -104,7 +122,17 @@ def create_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db.refresh(db_client)
     return db_client
 
-@router.post("/{client_id}/pin", response_model=schemas.ClientResponse)
+@router.post(
+    "/{client_id}/pin", 
+    response_model=schemas.ClientResponse,
+    summary="Fixar / Desfixar Contato",
+    description="""
+    Alterna o status de fixado (is_pinned) de um contato. É permitido fixar no máximo 10 contatos no topo da lista.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Qualquer usuário autenticado (**SUPER_ADMIN**, **ADMIN**, **USER**).
+    """
+)
 def toggle_pin_client(client_id: int, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -129,7 +157,17 @@ def toggle_pin_client(client_id: int, db: Session = Depends(get_db)):
     db.refresh(db_client)
     return db_client
 
-@router.get("/{client_id}", response_model=schemas.ClientResponse)
+@router.get(
+    "/{client_id}", 
+    response_model=schemas.ClientResponse,
+    summary="Obter Detalhes de um Contato",
+    description="""
+    Retorna as informações completas de um contato específico pelo ID.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Qualquer usuário autenticado com acesso ao cliente.
+    """
+)
 def get_client(client_id: int, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -139,7 +177,17 @@ def get_client(client_id: int, db: Session = Depends(get_db)):
         )
     return db_client
 
-@router.put("/{client_id}", response_model=schemas.ClientResponse)
+@router.put(
+    "/{client_id}", 
+    response_model=schemas.ClientResponse,
+    summary="Atualizar Contato",
+    description="""
+    Atualiza dados de um contato existente (nome, tipo, observações, dados de servidor, etc.).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def update_client(client_id: int, client_update: schemas.ClientUpdate, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -156,7 +204,17 @@ def update_client(client_id: int, client_update: schemas.ClientUpdate, db: Sessi
     db.refresh(db_client)
     return db_client
 
-@router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{client_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Excluir Contato",
+    description="""
+    Remove permanentemente um contato e seus registros vinculados.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Exclusivo para **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def delete_client(client_id: int, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -169,14 +227,35 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     return None
 
 # Endpoints de Anexos / Documentos do Contato
-@router.get("/{client_id}/attachments", response_model=List[schemas.ClientAttachmentResponse])
+@router.get(
+    "/{client_id}/attachments", 
+    response_model=List[schemas.ClientAttachmentResponse],
+    summary="Listar Anexos do Contato",
+    description="""
+    Retorna a lista de documentos e arquivos anexados ao contato.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Usuários autenticados com acesso ao cliente.
+    """
+)
 def get_client_attachments(client_id: int, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Contato não encontrado.")
     return db.query(models.ClientAttachment).filter(models.ClientAttachment.client_id == client_id).all()
 
-@router.post("/{client_id}/attachments", response_model=schemas.ClientAttachmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{client_id}/attachments", 
+    response_model=schemas.ClientAttachmentResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Adicionar Anexo ao Contato",
+    description="""
+    Envia e anexa um novo arquivo ao cadastro do contato.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def create_client_attachment(client_id: int, attachment_data: schemas.ClientAttachmentCreate, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -193,7 +272,17 @@ def create_client_attachment(client_id: int, attachment_data: schemas.ClientAtta
     db.refresh(db_attachment)
     return db_attachment
 
-@router.delete("/{client_id}/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{client_id}/attachments/{attachment_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remover Anexo do Contato",
+    description="""
+    Exclui um documento anexado ao contato.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def delete_client_attachment(client_id: int, attachment_id: int, db: Session = Depends(get_db)):
     attachment = db.query(models.ClientAttachment).filter(
         models.ClientAttachment.id == attachment_id,

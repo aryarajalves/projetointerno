@@ -26,7 +26,17 @@ def init_super_admin(db: Session):
         db.commit()
         print(f"✅ Super Admin criado com sucesso: {admin_email}")
 
-@router.post("/login", response_model=schemas.LoginResponse)
+@router.post(
+    "/login", 
+    response_model=schemas.LoginResponse,
+    summary="Realizar Login no Sistema",
+    description="""
+    Autentica um usuário existente com **e-mail** e **senha**, retornando o **Token JWT** de acesso e os dados do perfil do usuário.
+
+    🔓 **Autenticação:** Não necessária (Rota Pública).  
+    👤 **Permissão:** Qualquer usuário registrado no sistema.
+    """
+)
 def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == login_data.email).first()
     if not user or user.password != login_data.password:

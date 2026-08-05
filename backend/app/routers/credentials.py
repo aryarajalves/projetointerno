@@ -7,7 +7,17 @@ from app import models, schemas
 
 router = APIRouter(prefix="/api/clients", tags=["Credentials"])
 
-@router.get("/{client_id}/credentials", response_model=schemas.CredentialListResponse)
+@router.get(
+    "/{client_id}/credentials", 
+    response_model=schemas.CredentialListResponse,
+    summary="Listar Credenciais / Senhas de um Contato",
+    description="""
+    Retorna a lista paginada de credenciais e acessos salvos para um contato específico. Credenciais marcadas como restritas a Super Admin só são retornadas para requisições com o header de perfil `SUPER_ADMIN`.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Qualquer usuário autenticado (**SUPER_ADMIN**, **ADMIN**, **USER**).
+    """
+)
 def get_credentials(
     client_id: int, 
     page: int = Query(1, ge=1),
@@ -45,7 +55,18 @@ def get_credentials(
         "pages": (total + limit - 1) // limit if total > 0 else 1
     }
 
-@router.post("/{client_id}/credentials", response_model=schemas.CredentialResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{client_id}/credentials", 
+    response_model=schemas.CredentialResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Cadastrar Nova Credencial",
+    description="""
+    Salva uma nova credencial/senha de acesso para o contato especificado.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def create_credential(client_id: int, credential: schemas.CredentialCreate, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -57,7 +78,17 @@ def create_credential(client_id: int, credential: schemas.CredentialCreate, db: 
     db.refresh(db_credential)
     return db_credential
 
-@router.put("/{client_id}/credentials/{credential_id}", response_model=schemas.CredentialResponse)
+@router.put(
+    "/{client_id}/credentials/{credential_id}", 
+    response_model=schemas.CredentialResponse,
+    summary="Atualizar Credencial",
+    description="""
+    Atualiza as informações de uma credencial existente (título, usuário, senha, URL de acesso, notas, restrição a Super Admin).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def update_credential(client_id: int, credential_id: int, credential_update: schemas.CredentialCreate, db: Session = Depends(get_db)):
     db_cred = db.query(models.Credential).filter(
         models.Credential.id == credential_id,
@@ -74,7 +105,17 @@ def update_credential(client_id: int, credential_id: int, credential_update: sch
     db.refresh(db_cred)
     return db_cred
 
-@router.delete("/{client_id}/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{client_id}/credentials/{credential_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Excluir Credencial",
+    description="""
+    Remove uma credencial cadastrada para o contato.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def delete_credential(client_id: int, credential_id: int, db: Session = Depends(get_db)):
     db_cred = db.query(models.Credential).filter(
         models.Credential.id == credential_id,

@@ -7,14 +7,35 @@ from app import models, schemas
 
 router = APIRouter(prefix="/api/clients", tags=["Purchased Apps"])
 
-@router.get("/{client_id}/apps", response_model=List[schemas.PurchasedAppResponse])
+@router.get(
+    "/{client_id}/apps", 
+    response_model=List[schemas.PurchasedAppResponse],
+    summary="Listar Aplicações Contratadas de um Contato",
+    description="""
+    Retorna a lista de aplicações e ferramentas contratadas por um cliente específico, com os respectivos parcelamentos e valores.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def get_client_apps(client_id: int, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
         raise HTTPException(status_code=404, detail="Contato não encontrado.")
     return db.query(models.PurchasedApp).filter(models.PurchasedApp.client_id == client_id).all()
 
-@router.post("/{client_id}/apps", response_model=schemas.PurchasedAppResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{client_id}/apps", 
+    response_model=schemas.PurchasedAppResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar / Atualizar Compra de Aplicação",
+    description="""
+    Registra a contratação de uma aplicação para o cliente ou atualiza as condições de pagamento (parcelamento, valores e data de renovação).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def create_purchased_app(client_id: int, app_data: schemas.PurchasedAppCreate, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not db_client:
@@ -62,7 +83,17 @@ def create_purchased_app(client_id: int, app_data: schemas.PurchasedAppCreate, d
 
     return db_app
 
-@router.patch("/{client_id}/apps/{app_id}/installments/{installment_id}", response_model=schemas.AppInstallmentResponse)
+@router.patch(
+    "/{client_id}/apps/{app_id}/installments/{installment_id}", 
+    response_model=schemas.AppInstallmentResponse,
+    summary="Atualizar Status da Parcela de uma Aplicação",
+    description="""
+    Atualiza o status de pagamento de uma parcela (ex: pending ou paid) e recalcula o status geral da contratação.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def toggle_installment_status(client_id: int, app_id: int, installment_id: int, status: str, db: Session = Depends(get_db)):
     db_inst = db.query(models.AppInstallment).join(models.PurchasedApp).filter(
         models.AppInstallment.id == installment_id,
@@ -90,7 +121,17 @@ def toggle_installment_status(client_id: int, app_id: int, installment_id: int, 
     db.refresh(db_inst)
     return db_inst
 
-@router.delete("/{client_id}/apps/{app_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{client_id}/apps/{app_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remover Aplicação Contratada",
+    description="""
+    Exclui um registro de aplicação contratada pelo cliente.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def delete_purchased_app(client_id: int, app_id: int, db: Session = Depends(get_db)):
     db_app = db.query(models.PurchasedApp).filter(
         models.PurchasedApp.id == app_id,

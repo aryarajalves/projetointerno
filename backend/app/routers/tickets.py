@@ -17,7 +17,17 @@ def build_ticket_response(ticket: models.SupportTicket) -> schemas.SupportTicket
         res.created_by_name = "Super Admin"
     return res
 
-@router.get("/", response_model=List[schemas.SupportTicketResponse])
+@router.get(
+    "/", 
+    response_model=List[schemas.SupportTicketResponse],
+    summary="Listar Tickets de Suporte",
+    description="""
+    Retorna a lista de tickets de suporte cadastrados com filtros por cliente, status (open, in_progress, resolved, closed), tipo (bug, feature, task), aplicação e busca.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Qualquer usuário autenticado (**SUPER_ADMIN**, **ADMIN**, **USER**).
+    """
+)
 def get_tickets(
     client_id: Optional[int] = Query(None),
     status_filter: Optional[str] = Query(None),
@@ -46,7 +56,18 @@ def get_tickets(
     tickets = query.all()
     return [build_ticket_response(t) for t in tickets]
 
-@router.post("/", response_model=schemas.SupportTicketResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", 
+    response_model=schemas.SupportTicketResponse, 
+    status_code=status.HTTP_201_CREATED,
+    summary="Abrir Novo Ticket de Suporte",
+    description="""
+    Abre um novo chamando de suporte vinculado a um cliente e uma aplicação (AgentFlow, ZapJords, Oraculo, ZapGroup, Outros).
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Qualquer usuário autenticado (**SUPER_ADMIN**, **ADMIN**, **USER**).
+    """
+)
 def create_ticket(ticket_data: schemas.SupportTicketCreate, db: Session = Depends(get_db)):
     db_client = db.query(models.Client).filter(models.Client.id == ticket_data.client_id).first()
     if not db_client:
@@ -70,7 +91,17 @@ def create_ticket(ticket_data: schemas.SupportTicketCreate, db: Session = Depend
 
     return build_ticket_response(db_ticket)
 
-@router.get("/{ticket_id}", response_model=schemas.SupportTicketResponse)
+@router.get(
+    "/{ticket_id}", 
+    response_model=schemas.SupportTicketResponse,
+    summary="Obter Detalhes de um Ticket",
+    description="""
+    Retorna as informações completas de um ticket de suporte pelo ID.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** Qualquer usuário autenticado.
+    """
+)
 def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
     db_ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
     if not db_ticket:
@@ -78,7 +109,17 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
 
     return build_ticket_response(db_ticket)
 
-@router.put("/{ticket_id}", response_model=schemas.SupportTicketResponse)
+@router.put(
+    "/{ticket_id}", 
+    response_model=schemas.SupportTicketResponse,
+    summary="Atualizar Ticket de Suporte",
+    description="""
+    Atualiza status (ex: resolved, in_progress, closed), prioridade, título, descrição ou data limite de resolução do ticket.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def update_ticket(ticket_id: int, update_data: schemas.SupportTicketUpdate, db: Session = Depends(get_db)):
     db_ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
     if not db_ticket:
@@ -93,7 +134,17 @@ def update_ticket(ticket_id: int, update_data: schemas.SupportTicketUpdate, db: 
 
     return build_ticket_response(db_ticket)
 
-@router.delete("/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{ticket_id}", 
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Excluir Ticket de Suporte",
+    description="""
+    Remove permanentemente um ticket de suporte do sistema.
+
+    🔒 **Autenticação:** Requer Token JWT (`Bearer Token`).  
+    👤 **Permissão:** **SUPER_ADMIN** e **ADMIN**.
+    """
+)
 def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
     db_ticket = db.query(models.SupportTicket).filter(models.SupportTicket.id == ticket_id).first()
     if not db_ticket:
